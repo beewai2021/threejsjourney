@@ -1,19 +1,7 @@
 import "./style.css"
 
 import * as THREE from "three"
-
-// Vector 3 methods
-// length() === length of distance between mesh position and center of scene
-// distanceTo() === distance between two Vector 3(s)
-// normalize() === set length between vector and center of scene to 1
-// console.log(
-//   `mesh's distance from the center of scene: ${mesh.position.length()}`
-// )
-// console.log(
-//   `distance between mesh and camera: ${mesh.position.distanceTo(
-//     camera.position
-//   )}`
-// )
+import gsap from "gsap"
 
 // Canvas
 const canvas = document.querySelector("canvas.webgl")
@@ -21,68 +9,61 @@ const canvas = document.querySelector("canvas.webgl")
 // Scene
 const scene = new THREE.Scene()
 
-const axesHelper = new THREE.AxesHelper(1)
+const axesHelper = new THREE.AxesHelper()
 scene.add(axesHelper)
 
-/**
- * Sizes
- */
+// Object
+const geometry = new THREE.BoxGeometry(1, 1, 1)
+const material = new THREE.MeshBasicMaterial({
+  color: 0xff0000,
+  wireframe: true,
+})
+const mesh = new THREE.Mesh(geometry, material)
+scene.add(mesh)
+
+// Sizes
 const sizes = {
   width: 800,
   height: 600,
 }
 
-/**
- * Camera
- */
+// Camera
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height)
 camera.position.z = 3
 scene.add(camera)
 
-/**
- * Objects
- */
-const group = new THREE.Group()
-scene.add(group)
-
-const cube1 = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshBasicMaterial({
-    color: 0xff0000,
-    wireframe: true,
-  })
-)
-const cube2 = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshBasicMaterial({
-    color: 0x00ff00,
-    wireframe: true,
-  })
-)
-cube2.position.x = -2
-const cube3 = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshBasicMaterial({
-    color: 0x0000ff,
-    wireframe: true,
-  })
-)
-cube3.position.x = 2
-group.add(cube1)
-group.add(cube2)
-group.add(cube3)
-
-group.position.y = 1
-group.scale.y = 2
-group.rotation.y = 1
-
-camera.lookAt(group.position)
-
-/**
- * Renderer
- */
+// Renderer
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
 })
 renderer.setSize(sizes.width, sizes.height)
-renderer.render(scene, camera)
+
+gsap.to(mesh.position, {
+  delay: 0.5,
+  duration: 1,
+  x: 2,
+  ease: "bounce.out",
+})
+
+// Animation
+// rAf calls the function on the next frame, like stop motion
+// 60hz screens calls the function 60 times per second
+
+// getElapsedTime() counts up, starting from 0, using seconds
+// getElapsedTime() * Math.PI * 2 === one revolution per second
+// since it goes up in seconds, it means each second its going up by 1 unit
+const clock = new THREE.Clock()
+
+const tick = () => {
+  const elapsedTime = clock.getElapsedTime()
+
+  //   mesh.position.y = Math.sin(elapsedTime) // starts at 0
+  //   mesh.position.x = Math.cos(elapsedTime) // starts at 1
+
+  camera.lookAt(mesh.position)
+
+  renderer.render(scene, camera)
+  requestAnimationFrame(tick)
+}
+
+tick()
