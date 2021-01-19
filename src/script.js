@@ -16,7 +16,10 @@ const scene = new THREE.Scene()
  * Object
  */
 const geometry = new THREE.BoxGeometry(1, 1, 1)
-const material = new THREE.MeshBasicMaterial({ color: 0xff0000 })
+const material = new THREE.MeshBasicMaterial({
+  color: 0xff0000,
+  wireframe: true,
+})
 const mesh = new THREE.Mesh(geometry, material)
 scene.add(mesh)
 
@@ -24,9 +27,45 @@ scene.add(mesh)
  * Sizes
  */
 const sizes = {
-  width: 800,
-  height: 600,
+  width: window.innerWidth,
+  height: window.innerHeight,
 }
+
+window.addEventListener("resize", () => {
+  // update size
+  sizes.width = window.innerWidth
+  sizes.height = window.innerHeight
+
+  // update camera
+  camera.aspect = sizes.width / sizes.height
+  camera.updateProjectionMatrix()
+
+  // update renderer
+  renderer.setSize(sizes.width, sizes.height)
+
+  // update pixel ratio when user changes screen
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+})
+
+// Fullscreen
+window.addEventListener("dblclick", () => {
+  const fullScreenElement =
+    document.fullScreenElement || document.webkitFullscreenElement
+
+  if (!fullScreenElement) {
+    if (canvas.requestFullscreen) {
+      canvas.requestFullscreen()
+    } else if (canvas.webkitRequestFullscreen) {
+      canvas.webkitRequestFullscreen()
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen()
+    }
+  }
+})
 
 /**
  * Camera
@@ -48,18 +87,17 @@ controls.enableDamping = true
 /**
  * Renderer
  */
-const renderer = new THREE.WebGLRenderer({
-  canvas: canvas,
-})
+const renderer = new THREE.WebGLRenderer({ canvas: canvas })
 renderer.setSize(sizes.width, sizes.height)
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
 /**
  * Animate
  */
-const clock = new THREE.Clock()
+// const clock = new THREE.Clock()
 
 const tick = () => {
-  const elapsedTime = clock.getElapsedTime()
+  // const elapsedTime = clock.getElapsedTime()
 
   // Update controls
   controls.update()
