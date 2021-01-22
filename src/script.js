@@ -15,93 +15,49 @@ const canvas = document.querySelector("canvas.webgl")
 
 // Scene
 const scene = new THREE.Scene()
-scene.background = new THREE.Color("silver")
-
-// const axesHelper = new THREE.AxesHelper(3)
-// scene.add(axesHelper)
-
-// Loading Manager
-const loadingManager = new THREE.LoadingManager()
-loadingManager.onProgress = (_, itemsLoaded, itemsTotal) =>
-  console.log(`${(itemsLoaded / itemsTotal) * 100}%`)
-loadingManager.onLoad = () => console.log("loading done")
 
 /**
- * Textures
+ * Lights
  */
-const textureLoader = new THREE.TextureLoader()
-const matcapTexture = textureLoader.load("/textures/matcaps/3.png")
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
+scene.add(ambientLight)
+
+const pointLight = new THREE.PointLight(0xffffff, 0.5)
+pointLight.position.x = 2
+pointLight.position.y = 3
+pointLight.position.z = 4
+scene.add(pointLight)
 
 /**
- * Object
+ * Objects
  */
-// const cube = new THREE.Mesh(
-//   new THREE.BoxBufferGeometry(1, 1, 1),
-//   new THREE.MeshMatcapMaterial({ matcap: matcapTexture })
-// )
+// Material
+const material = new THREE.MeshStandardMaterial()
+material.roughness = 0.4
 
-// scene.add(cube)
+// Objects
+const sphere = new THREE.Mesh(
+  new THREE.SphereBufferGeometry(0.5, 32, 32),
+  material
+)
+sphere.position.x = -1.5
 
-const material = new THREE.MeshMatcapMaterial({
-  matcap: matcapTexture,
-})
+const cube = new THREE.Mesh(
+  new THREE.BoxBufferGeometry(0.75, 0.75, 0.75),
+  material
+)
 
-// Font geometry
-const fontLoader = new THREE.FontLoader(loadingManager)
-const fontPath = "/fonts/helvetiker_regular.typeface.json"
-fontLoader.load(fontPath, (font) => {
-  const textGeometry = new THREE.TextBufferGeometry("beewai", {
-    font: font,
-    size: 0.5,
-    height: 0.04, // z or depth of text
-    curveSegments: 6, // smoothness of curves
-    bevelEnabled: true,
-    bevelThickness: 0.01, // bevel depth extension
-    bevelSize: 0.01, // bevel edge size
-    bevelOffset: 0, // inner bevel offset
-    bevelSegments: 5, // bevel edge layers (anti alias)
-  })
+const torus = new THREE.Mesh(
+  new THREE.TorusBufferGeometry(0.3, 0.2, 32, 64),
+  material
+)
+torus.position.x = 1.5
 
-  const text = new THREE.Mesh(textGeometry, material)
+const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(5, 5), material)
+plane.rotation.x = -Math.PI * 0.5
+plane.position.y = -0.65
 
-  scene.add(text)
-
-  text.geometry.computeBoundingBox() // must be computed before using geometry.boundingBox, otherwise would return null
-  // geometry.boundingBox ignores bevel sizes
-  // boundingBox is used for three.js to calculate what to and what not to render based on its intersection with the camera's frustum cull
-
-  // translates the vertices of the vertices without changing the mesh's position
-  // intended to be a one time only setter event, not ran in an animation loop
-  // textGeometry.translate(
-  //   -textGeometry.boundingBox.max.x * 0.5,
-  //   -textGeometry.boundingBox.max.y * 0.5,
-  //   -textGeometry.boundingBox.max.z * 0.5
-  // )
-
-  text.geometry.center() // center geometry based on its bounding box, including bezel protrusions
-})
-
-// 100 donuts
-const donutGeometry = new THREE.TorusBufferGeometry(0.3, 0.07, 20, 45)
-const amountOfDonuts = 100
-for (let i = 0; i < amountOfDonuts; i++) {
-  const donut = new THREE.Mesh(donutGeometry, material)
-
-  donut.position.set(
-    (Math.random() - 0.5) * 5,
-    (Math.random() - 0.5) * 5,
-    -Math.random() - 1
-  )
-
-  donut.rotation.x = Math.random() * Math.PI
-  donut.rotation.y = Math.random() * Math.PI
-
-  const randomScale = Math.random() + 0.1
-
-  donut.scale.set(randomScale, randomScale, randomScale)
-
-  scene.add(donut)
-}
+scene.add(sphere, cube, torus, plane)
 
 /**
  * Sizes
@@ -135,7 +91,9 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(0, -0.2, 1.5)
+camera.position.x = 1
+camera.position.y = 1
+camera.position.z = 2
 scene.add(camera)
 
 // Controls
@@ -159,7 +117,14 @@ const clock = new THREE.Clock()
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
 
-  camera.position.y = Math.sin(elapsedTime) * 0.08
+  // Update objects
+  sphere.rotation.y = 0.1 * elapsedTime
+  cube.rotation.y = 0.1 * elapsedTime
+  torus.rotation.y = 0.1 * elapsedTime
+
+  sphere.rotation.x = 0.15 * elapsedTime
+  cube.rotation.x = 0.15 * elapsedTime
+  torus.rotation.x = 0.15 * elapsedTime
 
   // Update controls
   controls.update()
