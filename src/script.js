@@ -14,16 +14,17 @@ const canvas = document.querySelector("canvas.webgl")
 const scene = new THREE.Scene()
 
 // Axes helper
-const axesHelper = new THREE.AxesHelper(2)
+const axesHelper = new THREE.AxesHelper(3)
 scene.add(axesHelper)
 
 // Particles
 const particlesConfig = {
-  particlesCount: 100,
-  particleSize: 0.02,
-  particleColor: 0xff0000,
-  particlesRadius: 2,
-  levels: 3,
+  particlesCount: 500,
+  particleSize: 0.03,
+  particleColor: 0xffff00,
+  particlesDiameter: 3,
+  levels: 10,
+  particlesCeiling: 3,
 }
 
 const particlesGeometry = new THREE.BufferGeometry()
@@ -34,23 +35,30 @@ const particlesPositions = new Float32Array(
   particlesConfig.particlesCount * pointsPerVertex
 )
 
-// 0 ---> particlesCount
 for (let point = 0; point < particlesConfig.particlesCount; point++) {
   const vertexPoint = point * 3 // 0... 3... 6... 9...
+
   const vertexX = vertexPoint + 0 // x
   const vertexY = vertexPoint + 1 // y
   const vertexZ = vertexPoint + 2 // z
-  particlesPositions[vertexX] = Math.random() * particlesConfig.particlesRadius
-  // first 20 should be 0
-  // second 20 should be 1
-  // third 20 should be 2
-  // fourth 20 should be 3
-  // last 20 should be 4
-  const levelElevation = Math.floor(
-    point / (particlesConfig.particlesCount / particlesConfig.levels)
-  )
-  // TODO: add levelElevation range
-  particlesPositions[vertexY] = levelElevation
+
+  // x offset
+  particlesPositions[vertexX] =
+    Math.random() * particlesConfig.particlesDiameter
+
+  const particlesPerLevel =
+    particlesConfig.particlesCount / particlesConfig.levels
+
+  const levelIndex = Math.floor(point / particlesPerLevel)
+
+  const levelIndexWithCeilingFactor =
+    levelIndex *
+    (particlesConfig.particlesCeiling / (particlesConfig.levels - 1))
+
+  // y offset
+  particlesPositions[vertexY] = levelIndexWithCeilingFactor
+
+  // z offset
   particlesPositions[vertexZ] = 0
 }
 
@@ -95,7 +103,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(0, 0, 3)
+camera.position.set(2, 4, 6)
 scene.add(camera)
 
 // Controls
