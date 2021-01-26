@@ -18,64 +18,140 @@ const axesHelper = new THREE.AxesHelper(3)
 scene.add(axesHelper)
 
 // Particles
-const particlesConfig = {
-  particlesCount: 500,
-  particleSize: 0.03,
-  particleColor: 0xffff00,
-  particlesDiameter: 3,
-  levels: 10,
-  particlesCeiling: 3,
+const galaxyParameters = {
+  count: 100000,
+  size: 0.01,
+  radius: 5,
+  branches: 3,
+  spin: 1,
+  randomness: 0.2,
+  randomnessPower: 3,
+  insideColor: 0xff6030,
+  outsideColor: 0x1b3984,
 }
 
-const particlesGeometry = new THREE.BufferGeometry()
+let galaxyGeometry = null
+let galaxyMaterial = null
+let galaxyPoints = null
 
-const pointsPerVertex = 3
+const galaxyFolder = gui.addFolder("galaxy")
+galaxyFolder.open()
 
-const particlesPositions = new Float32Array(
-  particlesConfig.particlesCount * pointsPerVertex
-)
+const generateGalaxy = () => {
+  if (galaxyPoints !== null) {
+    // dispose - clears memory
+    galaxyGeometry.dispose()
+    galaxyMaterial.dispose()
+    // theres not much memory usage as a mesh just combines a geometry and material, so use scene.remove() instead
+    scene.remove(galaxyPoints)
+  }
 
-for (let point = 0; point < particlesConfig.particlesCount; point++) {
-  const vertexPoint = point * 3 // 0... 3... 6... 9...
+  galaxyGeometry = new THREE.BufferGeometry()
+  const vertexPositions = 3
 
-  const vertexX = vertexPoint + 0 // x
-  const vertexY = vertexPoint + 1 // y
-  const vertexZ = vertexPoint + 2 // z
+  // x,y,z
+  const geometryVertexPositions = new Float32Array(
+    galaxyParameters.count * vertexPositions
+  )
 
-  // x offset
-  particlesPositions[vertexX] =
-    Math.random() * particlesConfig.particlesDiameter
+  // r,g,b
+  const geometryVertexColors = new Float32Array(
+    galaxyParameters.count * vertexPositions
+  )
 
-  const particlesPerLevel =
-    particlesConfig.particlesCount / particlesConfig.levels
+  const colorInside = new THREE.Color(galaxyParameters.insideColor)
+  const colorOutside = new THREE.Color(galaxyParameters.outsideColor)
 
-  const levelIndex = Math.floor(point / particlesPerLevel)
+  for (let i = 0; i < galaxyParameters.count; i++) {
+    // create (x,y,z) for each vertex by multiplying by 3
+    const i3 = i * 3 // 3, 6, 9, 12...
 
-  const levelIndexWithCeilingFactor =
-    levelIndex *
-    (particlesConfig.particlesCeiling / (particlesConfig.levels - 1))
+    const radius = Math.random() * galaxyParameters.radius // 0 <---> 5
+    const spinAngle = radius * galaxyParameters.spin
+    const branchAngle =
+      ((i % galaxyParameters.branches) / galaxyParameters.branches) *
+      (Math.PI * 2) // normalize angle between 0 <---> 1 based on # of branches
 
-  // y offset
-  particlesPositions[vertexY] = levelIndexWithCeilingFactor
+    const randomX =
+      Math.pow(Math.random(), galaxyParameters.randomnessPower) *
+      (Math.random() < 0.5 ? 1 : -1) *
+      galaxyParameters.randomness
+    const randomY =
+      Math.pow(Math.random(), galaxyParameters.randomnessPower) *
+      (Math.random() < 0.5 ? 1 : -1) *
+      galaxyParameters.randomness
+    const randomZ =
+      Math.pow(Math.random(), galaxyParameters.randomnessPower) *
+      (Math.random() < 0.5 ? 1 : -1) *
+      galaxyParameters.randomness
 
-  // z offset
-  particlesPositions[vertexZ] = 0
+    geometryVertexPositions[i3 + 0] =
+      Math.cos(branchAngle + spinAngle) * radius + randomX // x
+    geometryVertexPositions[i3 + 1] = randomY // y
+    geometryVertexPositions[i3 + 2] =
+      Math.sin(branchAngle + spinAngle) * radius + randomZ // z
+
+    // Colors
+    const mixedColor = colorInside.clone()
+    mixedColor.lerp(colorOutside, radius / galaxyParameters.radius)
+
+    geometryVertexColors[i3 + 0] = mixedColor.r
+    geometryVertexColors[i3 + 1] = mixedColor.g
+    geometryVertexColors[i3 + 2] = mixedColor.b
+  }
+
+  galaxyGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(geometryVertexPositions, vertexPositions)
+  )
+
+  galaxyGeometry.setAttribute(
+    "color",
+    new THREE.BufferAttribute(geometryVertexColors, vertexPositions)
+  )
+
+  galaxyMaterial = new THREE.PointsMaterial({
+    size: galaxyParameters.size,
+    sizeAttenuation: true,
+    vertexColors: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  })
+
+  galaxyPoints = new THREE.Points(galaxyGeometry, galaxyMaterial)
+
+  scene.add(galaxyPoints)
 }
 
-particlesGeometry.setAttribute(
-  "position",
-  new THREE.BufferAttribute(particlesPositions, pointsPerVertex)
-)
+generateGalaxy()
 
-const particlesMaterial = new THREE.PointsMaterial({
-  size: particlesConfig.particleSize,
-  sizeAttenuation: true,
-  color: particlesConfig.particleColor,
-})
-
-const particles = new THREE.Points(particlesGeometry, particlesMaterial)
-
-scene.add(particles)
+galaxyFolder
+  .add(galaxyParameters, "count", 100, 100000, 100)
+  .onFinishChange(generateGalaxy) // regenerate galaxy
+galaxyFolder
+  .add(galaxyParameters, "radius", 0.01, 20, 0.01)
+  .onFinishChange(generateGalaxy)
+galaxyFolder
+  .add(galaxyParameters, "spin", -5, 5, 0.001)
+  .onFinishChange(generateGalaxy)
+galaxyFolder
+  .add(galaxyParameters, "randomness", 0, 2, 0.001)
+  .onFinishChange(generateGalaxy)
+galaxyFolder
+  .add(galaxyParameters, "randomnessPower", 1, 10, 0.001)
+  .onFinishChange(generateGalaxy)
+galaxyFolder
+  .add(galaxyParameters, "branches", 2, 20, 1)
+  .onFinishChange(generateGalaxy)
+galaxyFolder
+  .add(galaxyParameters, "size", 0, 0.1, 0.001)
+  .onChange(() => (galaxyMaterial.size = galaxyParameters.size)) // update particle size using existing galaxy
+galaxyFolder
+  .addColor(galaxyParameters, "insideColor")
+  .onFinishChange(generateGalaxy)
+galaxyFolder
+  .addColor(galaxyParameters, "outsideColor")
+  .onFinishChange(generateGalaxy)
 
 const sizes = {
   width: window.innerWidth,
@@ -103,7 +179,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(2, 4, 6)
+camera.position.set(2, 5, 10)
 scene.add(camera)
 
 // Controls
