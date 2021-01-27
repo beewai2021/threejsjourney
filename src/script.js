@@ -1,6 +1,7 @@
 import "./style.css"
 
 import * as THREE from "three"
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import * as dat from "dat.gui"
 
@@ -13,14 +14,35 @@ const canvas = document.querySelector("canvas.webgl")
 // Scene
 const scene = new THREE.Scene()
 
+const ambientLight = new THREE.AmbientLight()
+scene.add(ambientLight)
+
+const loadingManager = new THREE.LoadingManager()
+
+const gltfLoader = new GLTFLoader(loadingManager)
+const textureLoader = new THREE.TextureLoader(loadingManager)
+
+gltfLoader.load("/model/scene.gltf", (gltf) => {
+  const matcapTexture = textureLoader.load("/matcap/matcap.png")
+  const model = gltf.scene.children[0]
+  model.traverse((child) => {
+    if (child.isMesh) {
+      child.material = new THREE.MeshMatcapMaterial({ matcap: matcapTexture })
+    }
+  })
+  scene.add(model)
+})
+
 // Particles
+const particleTexture = textureLoader.load("/particles/texture.png")
+
 const particlesConfig = {
-  particlesCount: 3000,
-  particleSize: 0.02,
-  particlesRadius: 1.5,
+  particlesCount: 10000,
+  particleSize: 0.05,
+  particlesRadius: 1.2,
   particlesCeiling: 3,
-  levels: 10,
-  levelRandomness: 0.08,
+  levels: 8,
+  levelRandomness: 0.25,
   edgeColor: 0xffffff,
   middleColor: 0x0000ff,
 }
@@ -104,9 +126,15 @@ const particlesMaterial = new THREE.PointsMaterial({
   size: particlesConfig.particleSize,
   sizeAttenuation: true,
   vertexColors: true,
+  transparent: true,
+  alphaMap: particleTexture,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
 })
 
 const particles = new THREE.Points(particlesGeometry, particlesMaterial)
+
+particles.geometry.center()
 
 scene.add(particles)
 
@@ -140,7 +168,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(2.16, 3.18, 6.42)
+camera.position.set(0, 0, 5)
 scene.add(camera)
 
 // Controls
@@ -161,7 +189,7 @@ const tick = () => {
   const elapsedTime = clock.getElapsedTime()
 
   particles.rotation.y = elapsedTime * 0.2
-  // particles.position.y = -Math.tan(elapsedTime * 2) // thanos portal
+  // particles.position.y = -Math.tan(elapsedTime) // thanos portal
 
   // Update controls
   controls.update()
