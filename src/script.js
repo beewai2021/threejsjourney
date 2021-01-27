@@ -15,26 +15,35 @@ const scene = new THREE.Scene()
 
 // Particles
 const particlesConfig = {
-  particlesCount: 1000,
-  particleSize: 0.03,
-  particleColor: 0xffff00,
-  particlesDiameter: 3,
+  particlesCount: 3000,
+  particleSize: 0.02,
+  particlesRadius: 1.5,
   particlesCeiling: 3,
-  levels: 5,
+  levels: 10,
   levelRandomness: 0.08,
-  edgeColor: 0x0000ff,
+  edgeColor: 0xffffff,
+  middleColor: 0x0000ff,
 }
 
 const particlesGeometry = new THREE.BufferGeometry()
 
 const pointsPerVertex = 3
 
+// (x, y, z)
 const particlesPositions = new Float32Array(
+  particlesConfig.particlesCount * pointsPerVertex
+)
+
+// (r, g, b)
+const colorPositions = new Float32Array(
   particlesConfig.particlesCount * pointsPerVertex
 )
 
 const circleParticleSpread =
   (Math.PI * 2) / (particlesConfig.particlesCount / particlesConfig.levels)
+
+const edgeColor = new THREE.Color(particlesConfig.edgeColor)
+const middleColor = new THREE.Color(particlesConfig.middleColor)
 
 for (let point = 0; point < particlesConfig.particlesCount; point++) {
   const vertexPoint = point * 3 // 0... 3... 6... 9...
@@ -47,7 +56,7 @@ for (let point = 0; point < particlesConfig.particlesCount; point++) {
 
   // x offset
   particlesPositions[vertexX] =
-    Math.sin(angle) * particlesConfig.particlesDiameter
+    Math.sin(angle) * particlesConfig.particlesRadius * 2
 
   const particlesPerLevel =
     particlesConfig.particlesCount / particlesConfig.levels
@@ -66,7 +75,19 @@ for (let point = 0; point < particlesConfig.particlesCount; point++) {
 
   // z offset
   particlesPositions[vertexZ] =
-    Math.cos(angle) * particlesConfig.particlesDiameter
+    Math.cos(angle) * particlesConfig.particlesRadius * 2
+
+  // color
+  const particlesCenter = (particlesConfig.levels - 1) / 2
+  const distanceFromCenter =
+    Math.abs(particlesCenter - levelIndex) / particlesCenter
+
+  const middleColorClone = middleColor.clone()
+  const gradientColor = middleColorClone.lerp(edgeColor, distanceFromCenter)
+
+  colorPositions[vertexX] = gradientColor.r
+  colorPositions[vertexY] = gradientColor.g
+  colorPositions[vertexZ] = gradientColor.b
 }
 
 particlesGeometry.setAttribute(
@@ -74,21 +95,24 @@ particlesGeometry.setAttribute(
   new THREE.BufferAttribute(particlesPositions, pointsPerVertex)
 )
 
+particlesGeometry.setAttribute(
+  "color",
+  new THREE.BufferAttribute(colorPositions, pointsPerVertex)
+)
+
 const particlesMaterial = new THREE.PointsMaterial({
   size: particlesConfig.particleSize,
   sizeAttenuation: true,
-  color: particlesConfig.particleColor,
+  vertexColors: true,
 })
 
 const particles = new THREE.Points(particlesGeometry, particlesMaterial)
 
-// particles.geometry.center()
-
 scene.add(particles)
 
 // Axes helper
-const axesHelper = new THREE.AxesHelper(particlesConfig.particlesCeiling)
-scene.add(axesHelper)
+// const axesHelper = new THREE.AxesHelper(particlesConfig.particlesCeiling)
+// scene.add(axesHelper)
 
 const sizes = {
   width: window.innerWidth,
@@ -127,9 +151,7 @@ controls.enableDamping = true
 // })
 
 // Renderer
-const renderer = new THREE.WebGLRenderer({
-  canvas: canvas,
-})
+const renderer = new THREE.WebGLRenderer({ canvas: canvas })
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
@@ -138,7 +160,8 @@ const clock = new THREE.Clock()
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
 
-  // particles.rotation.y = elapsedTime * 0.2
+  particles.rotation.y = elapsedTime * 0.2
+  // particles.position.y = -Math.tan(elapsedTime * 2) // thanos portal
 
   // Update controls
   controls.update()
