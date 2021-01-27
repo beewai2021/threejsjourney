@@ -13,18 +13,16 @@ const canvas = document.querySelector("canvas.webgl")
 // Scene
 const scene = new THREE.Scene()
 
-// Axes helper
-const axesHelper = new THREE.AxesHelper(3)
-scene.add(axesHelper)
-
 // Particles
 const particlesConfig = {
-  particlesCount: 500,
+  particlesCount: 1000,
   particleSize: 0.03,
   particleColor: 0xffff00,
   particlesDiameter: 3,
-  levels: 10,
   particlesCeiling: 3,
+  levels: 5,
+  levelRandomness: 0.08,
+  edgeColor: 0x0000ff,
 }
 
 const particlesGeometry = new THREE.BufferGeometry()
@@ -35,6 +33,9 @@ const particlesPositions = new Float32Array(
   particlesConfig.particlesCount * pointsPerVertex
 )
 
+const circleParticleSpread =
+  (Math.PI * 2) / (particlesConfig.particlesCount / particlesConfig.levels)
+
 for (let point = 0; point < particlesConfig.particlesCount; point++) {
   const vertexPoint = point * 3 // 0... 3... 6... 9...
 
@@ -42,9 +43,11 @@ for (let point = 0; point < particlesConfig.particlesCount; point++) {
   const vertexY = vertexPoint + 1 // y
   const vertexZ = vertexPoint + 2 // z
 
+  const angle = circleParticleSpread * (point + 1)
+
   // x offset
   particlesPositions[vertexX] =
-    Math.random() * particlesConfig.particlesDiameter
+    Math.sin(angle) * particlesConfig.particlesDiameter
 
   const particlesPerLevel =
     particlesConfig.particlesCount / particlesConfig.levels
@@ -56,10 +59,14 @@ for (let point = 0; point < particlesConfig.particlesCount; point++) {
     (particlesConfig.particlesCeiling / (particlesConfig.levels - 1))
 
   // y offset
-  particlesPositions[vertexY] = levelIndexWithCeilingFactor
+  const yOffsetRandomness =
+    (Math.random() - 0.5) * particlesConfig.levelRandomness
+
+  particlesPositions[vertexY] = levelIndexWithCeilingFactor + yOffsetRandomness
 
   // z offset
-  particlesPositions[vertexZ] = 0
+  particlesPositions[vertexZ] =
+    Math.cos(angle) * particlesConfig.particlesDiameter
 }
 
 particlesGeometry.setAttribute(
@@ -75,7 +82,13 @@ const particlesMaterial = new THREE.PointsMaterial({
 
 const particles = new THREE.Points(particlesGeometry, particlesMaterial)
 
+// particles.geometry.center()
+
 scene.add(particles)
+
+// Axes helper
+const axesHelper = new THREE.AxesHelper(particlesConfig.particlesCeiling)
+scene.add(axesHelper)
 
 const sizes = {
   width: window.innerWidth,
@@ -103,12 +116,15 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(2, 4, 6)
+camera.position.set(2.16, 3.18, 6.42)
 scene.add(camera)
 
 // Controls
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
+// controls.addEventListener("change", (e) => {
+//   console.log(e.target.object.position)
+// })
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({
@@ -121,6 +137,8 @@ const clock = new THREE.Clock()
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
+
+  // particles.rotation.y = elapsedTime * 0.2
 
   // Update controls
   controls.update()
