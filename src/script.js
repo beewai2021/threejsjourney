@@ -4,126 +4,82 @@ import * as dat from "dat.gui"
 
 import "./style.css"
 
-// Debug
+/**
+ * Debug
+ */
 const gui = new dat.GUI()
 
+/**
+ * Base
+ */
 // Canvas
 const canvas = document.querySelector("canvas.webgl")
 
 // Scene
 const scene = new THREE.Scene()
 
-const ambientLight = new THREE.AmbientLight("#ffffff", 0.35)
+/**
+ * Textures
+ */
+const textureLoader = new THREE.TextureLoader()
+const cubeTextureLoader = new THREE.CubeTextureLoader()
+
+const environmentMapTexture = cubeTextureLoader.load([
+  "/textures/environmentMaps/0/px.png",
+  "/textures/environmentMaps/0/nx.png",
+  "/textures/environmentMaps/0/py.png",
+  "/textures/environmentMaps/0/ny.png",
+  "/textures/environmentMaps/0/pz.png",
+  "/textures/environmentMaps/0/nz.png",
+])
+
+/**
+ * Test sphere
+ */
+const sphere = new THREE.Mesh(
+  new THREE.SphereBufferGeometry(0.5, 32, 32),
+  new THREE.MeshStandardMaterial({
+    metalness: 0.3,
+    roughness: 0.4,
+    envMap: environmentMapTexture,
+  })
+)
+sphere.castShadow = true
+sphere.position.y = 0.5
+scene.add(sphere)
+
+/**
+ * Floor
+ */
+const floor = new THREE.Mesh(
+  new THREE.PlaneBufferGeometry(10, 10),
+  new THREE.MeshStandardMaterial({
+    color: "#777777",
+    metalness: 0.3,
+    roughness: 0.4,
+    envMap: environmentMapTexture,
+  })
+)
+floor.receiveShadow = true
+floor.rotation.x = -Math.PI * 0.5
+scene.add(floor)
+
+/**
+ * Lights
+ */
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
 scene.add(ambientLight)
 
-const directionalLight = new THREE.DirectionalLight()
-directionalLight.position.set(0, 3, 0)
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.2)
+directionalLight.castShadow = true
+directionalLight.shadow.mapSize.set(1024, 1024)
+directionalLight.shadow.camera.far = 15
+directionalLight.shadow.camera.left = -7
+directionalLight.shadow.camera.top = 7
+directionalLight.shadow.camera.right = 7
+directionalLight.shadow.camera.bottom = -7
+directionalLight.position.set(5, 5, 5)
 scene.add(directionalLight)
-
-const raycasterInteractionColors = {
-  default: "yellow",
-  mouseOver: "orange",
-  mouseClick: "orangered",
-}
-
-const object1 = new THREE.Mesh(
-  new THREE.SphereBufferGeometry(0.5, 16, 16),
-  new THREE.MeshPhongMaterial({ color: raycasterInteractionColors.default })
-)
-object1.position.x = -1.5
-
-const object2 = new THREE.Mesh(
-  new THREE.SphereBufferGeometry(0.5, 16, 16),
-  new THREE.MeshPhongMaterial({ color: raycasterInteractionColors.default })
-)
-
-const object3 = new THREE.Mesh(
-  new THREE.SphereBufferGeometry(0.5, 16, 16),
-  new THREE.MeshPhongMaterial({ color: raycasterInteractionColors.default })
-)
-object3.position.x = 1.5
-
-scene.add(object1, object2, object3)
-
-// raycaster
-const raycaster = new THREE.Raycaster()
-// const rayOrigin = new THREE.Vector3(-3, 0, 0)
-// const rayDirection = new THREE.Vector3(10, 0, 0)
-
-// normalize direction incase the ray direction is changed
-// ray direction is always 1 unit long, but its raycasting length is based on its near/far parameter
-// rayDirection.normalize() // all Vector3 classes can normalize, turning values between 0 to 1, in this case it keeps the direction
-
-// raycaster.set(rayOrigin, rayDirection) // determine where raycaster looks from and in what direction
-
-// intersect information
-// distance - length of distance between ray origin and intersected object face
-// face - vector 3 of intersected face
-// object - object that is intersected
-// point - 3d worldspace vector 3 coordinate of intersection
-// uv - uv of collison
-
-// const intersect = raycaster.intersectObject(object2) // one object being intersected would still be stored in an array, because the ray can go through the object multiple times, like penetrating two sides of a donut
-// const intersects = raycaster.intersectObjects([object1, object2, object3])
-
-// const rayOrigin = new Vector3(-3, 0, 0)
-// const rayDirection = new Vector3(10, 0, 0).normalize()
-// raycaster.set(rayOrigin, rayDirection) // set casting pov
-// const intersect = raycaster.intersectObject(object2)
-// const intersects = raycaster.intersectObjects([object1, object2, object3])
-
-// (x,y) instead of object
-const mouse = new THREE.Vector2()
-const objects = [object1, object2, object3]
-let currentIntersect = null
-
-// raycaster mouse enter & leave event
-window.addEventListener("mousemove", (e) => {
-  const { clientX, clientY } = e
-
-  // normalise mouse between -1 and 1 based on threejs x/y axes
-  mouse.x = (clientX / sizes.width) * 2 - 1
-  mouse.y = -(clientY / sizes.height) * 2 + 1
-
-  raycaster.setFromCamera(mouse, camera)
-
-  const intersects = raycaster.intersectObjects(objects)
-
-  const intersecting = intersects.length > 0
-
-  if (intersecting) {
-    if (!currentIntersect) {
-      currentIntersect = intersects[0].object
-      intersects[0].object.material.color.set(
-        raycasterInteractionColors.mouseOver
-      )
-    }
-  } else {
-    if (currentIntersect) {
-      currentIntersect = null
-      objects.forEach((obj) =>
-        obj.material.color.set(raycasterInteractionColors.default)
-      )
-    }
-  }
-})
-
-// raycaster click event
-window.addEventListener("click", () => {
-  if (currentIntersect) {
-    switch (currentIntersect) {
-      case object1:
-        object1.material.color.set(raycasterInteractionColors.mouseClick)
-        break
-      case object2:
-        object2.material.color.set(raycasterInteractionColors.mouseClick)
-        break
-      case object3:
-        object3.material.color.set(raycasterInteractionColors.mouseClick)
-        break
-    }
-  }
-})
 
 /**
  * Sizes
@@ -157,7 +113,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.z = 3
+camera.position.set(-3, 3, 3)
 scene.add(camera)
 
 // Controls
@@ -170,6 +126,8 @@ controls.enableDamping = true
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
 })
+renderer.shadowMap.enabled = true
+renderer.shadowMap.type = THREE.PCFSoftShadowMap
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
@@ -180,10 +138,6 @@ const clock = new THREE.Clock()
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
-
-  object1.position.y = Math.sin(elapsedTime * 3) / 3
-  object2.position.y = Math.sin(elapsedTime * 2) / 3
-  object3.position.y = Math.sin(elapsedTime * 1) / 3
 
   // Update controls
   controls.update()
