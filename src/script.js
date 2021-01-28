@@ -14,25 +14,35 @@ const canvas = document.querySelector("canvas.webgl")
 // Scene
 const scene = new THREE.Scene()
 
-const axesHelper = new THREE.AxesHelper(3)
-scene.add(axesHelper)
+const ambientLight = new THREE.AmbientLight("#ffffff", 0.35)
+scene.add(ambientLight)
+
+const directionalLight = new THREE.DirectionalLight()
+directionalLight.position.set(0, 3, 0)
+scene.add(directionalLight)
+
+const raycasterInteractionColors = {
+  default: "yellow",
+  mouseOver: "orange",
+  mouseClick: "orangered",
+}
 
 const object1 = new THREE.Mesh(
   new THREE.SphereBufferGeometry(0.5, 16, 16),
-  new THREE.MeshBasicMaterial()
+  new THREE.MeshPhongMaterial({ color: raycasterInteractionColors.default })
 )
-object1.position.x = -2
+object1.position.x = -1.5
 
 const object2 = new THREE.Mesh(
   new THREE.SphereBufferGeometry(0.5, 16, 16),
-  new THREE.MeshBasicMaterial()
+  new THREE.MeshPhongMaterial({ color: raycasterInteractionColors.default })
 )
 
 const object3 = new THREE.Mesh(
   new THREE.SphereBufferGeometry(0.5, 16, 16),
-  new THREE.MeshBasicMaterial()
+  new THREE.MeshPhongMaterial({ color: raycasterInteractionColors.default })
 )
-object3.position.x = 2
+object3.position.x = 1.5
 
 scene.add(object1, object2, object3)
 
@@ -66,28 +76,51 @@ const raycaster = new THREE.Raycaster()
 // (x,y) instead of object
 const mouse = new THREE.Vector2()
 const objects = [object1, object2, object3]
+let currentIntersect = null
 
+// raycaster mouse enter & leave event
 window.addEventListener("mousemove", (e) => {
   const { clientX, clientY } = e
+
   // normalise mouse between -1 and 1 based on threejs x/y axes
   mouse.x = (clientX / sizes.width) * 2 - 1
   mouse.y = -(clientY / sizes.height) * 2 + 1
+
+  raycaster.setFromCamera(mouse, camera)
+
+  const intersects = raycaster.intersectObjects(objects)
+
+  const intersecting = intersects.length > 0
+
+  if (intersecting) {
+    if (!currentIntersect) {
+      currentIntersect = intersects[0].object
+      intersects[0].object.material.color.set(
+        raycasterInteractionColors.mouseOver
+      )
+    }
+  } else {
+    if (currentIntersect) {
+      currentIntersect = null
+      objects.forEach((obj) =>
+        obj.material.color.set(raycasterInteractionColors.default)
+      )
+    }
+  }
 })
 
-// sphere click event
+// raycaster click event
 window.addEventListener("click", () => {
   if (currentIntersect) {
-    switch (currentIntersect.object) {
+    switch (currentIntersect) {
       case object1:
-        console.log("clicked on object 1")
+        object1.material.color.set(raycasterInteractionColors.mouseClick)
         break
       case object2:
-        console.log("clicked on object 2")
+        object2.material.color.set(raycasterInteractionColors.mouseClick)
         break
       case object3:
-        console.log("clicked on object 3")
-        break
-      default:
+        object3.material.color.set(raycasterInteractionColors.mouseClick)
         break
     }
   }
@@ -146,46 +179,12 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
  */
 const clock = new THREE.Clock()
 
-let currentIntersect = null
-
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
 
-  object1.position.y = Math.sin(elapsedTime * 0.3) * 1.5
-  object2.position.y = Math.sin(elapsedTime * 0.8) * 1.5
-  object3.position.y = Math.sin(elapsedTime * 1.4) * 1.5
-
-  // use color to detect which object is intersecting
-  //   const rayOrigin = new Vector3(-3, 0, 0)
-  //   const rayDirection = new Vector3(10, 0, 0).normalize()
-  //   raycaster.set(rayOrigin, rayDirection) // set casting pov
-  //   const intersect = raycaster.intersectObject(object2)
-  //   const intersects = raycaster.intersectObjects([object1, object2, object3])
-
-  // objects.forEach((object) => {
-  //   object.material.color.set("blue")
-  // })
-
-  //   intersects.forEach((int) => {
-  //     int.object.material.color.set("red")
-  //   })
-
-  raycaster.setFromCamera(mouse, camera)
-  const intersects = raycaster.intersectObjects(objects)
-
-  if (intersects.length > 0) {
-    // mouse enter event
-    if (currentIntersect !== null) {
-      currentIntersect.object.material.color.set("green")
-    }
-    currentIntersect = intersects[0]
-  } else {
-    // mouse leave event
-    if (currentIntersect) {
-      currentIntersect.object.material.color.set("white")
-    }
-    currentIntersect = null
-  }
+  object1.position.y = Math.sin(elapsedTime * 3) / 3
+  object2.position.y = Math.sin(elapsedTime * 2) / 3
+  object3.position.y = Math.sin(elapsedTime * 1) / 3
 
   // Update controls
   controls.update()
