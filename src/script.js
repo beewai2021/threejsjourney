@@ -41,7 +41,8 @@ const raycaster = new THREE.Raycaster()
 // const rayOrigin = new THREE.Vector3(-3, 0, 0)
 // const rayDirection = new THREE.Vector3(10, 0, 0)
 
-// normalize direction in case the ray direction is changed
+// normalize direction incase the ray direction is changed
+// ray direction is always 1 unit long, but its raycasting length is based on its near/far parameter
 // rayDirection.normalize() // all Vector3 classes can normalize, turning values between 0 to 1, in this case it keeps the direction
 
 // raycaster.set(rayOrigin, rayDirection) // determine where raycaster looks from and in what direction
@@ -61,6 +62,36 @@ const raycaster = new THREE.Raycaster()
 // raycaster.set(rayOrigin, rayDirection) // set casting pov
 // const intersect = raycaster.intersectObject(object2)
 // const intersects = raycaster.intersectObjects([object1, object2, object3])
+
+// (x,y) instead of object
+const mouse = new THREE.Vector2()
+const objects = [object1, object2, object3]
+
+window.addEventListener("mousemove", (e) => {
+  const { clientX, clientY } = e
+  // normalise mouse between -1 and 1 based on threejs x/y axes
+  mouse.x = (clientX / sizes.width) * 2 - 1
+  mouse.y = -(clientY / sizes.height) * 2 + 1
+})
+
+// sphere click event
+window.addEventListener("click", () => {
+  if (currentIntersect) {
+    switch (currentIntersect.object) {
+      case object1:
+        console.log("clicked on object 1")
+        break
+      case object2:
+        console.log("clicked on object 2")
+        break
+      case object3:
+        console.log("clicked on object 3")
+        break
+      default:
+        break
+    }
+  }
+})
 
 /**
  * Sizes
@@ -115,7 +146,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
  */
 const clock = new THREE.Clock()
 
-// const objects = [object1, object2, object3]
+let currentIntersect = null
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
@@ -131,13 +162,30 @@ const tick = () => {
   //   const intersect = raycaster.intersectObject(object2)
   //   const intersects = raycaster.intersectObjects([object1, object2, object3])
 
-  //   objects.forEach((object) => {
-  //     object.material.color.set("blue")
-  //   })
+  // objects.forEach((object) => {
+  //   object.material.color.set("blue")
+  // })
 
   //   intersects.forEach((int) => {
   //     int.object.material.color.set("red")
   //   })
+
+  raycaster.setFromCamera(mouse, camera)
+  const intersects = raycaster.intersectObjects(objects)
+
+  if (intersects.length > 0) {
+    // mouse enter event
+    if (currentIntersect !== null) {
+      currentIntersect.object.material.color.set("green")
+    }
+    currentIntersect = intersects[0]
+  } else {
+    // mouse leave event
+    if (currentIntersect) {
+      currentIntersect.object.material.color.set("white")
+    }
+    currentIntersect = null
+  }
 
   // Update controls
   controls.update()
