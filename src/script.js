@@ -3,7 +3,6 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import * as dat from "dat.gui"
 
 import "./style.css"
-import { Vector3 } from "three"
 
 // Debug
 const gui = new dat.GUI()
