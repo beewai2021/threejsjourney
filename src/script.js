@@ -1,5 +1,5 @@
 import * as THREE from "three"
-import CANNON from "cannon"
+import * as CANNON from "cannon-es"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import * as dat from "dat.gui"
 
@@ -19,6 +19,18 @@ const canvas = document.querySelector("canvas.webgl")
 // Scene
 const scene = new THREE.Scene()
 
+// Sound
+const hitSound = new Audio("/sounds/hit.mp3")
+const playHitSound = (collison) => {
+  const impactStrength = collison.contact.getImpactVelocityAlongNormal()
+  if (impactStrength > 1.5) {
+    // can use impactStrength to adjust sound volume
+    // hitSound.volume = Math.random() // volume goes from 0 <---> 1
+    hitSound.currentTime = 0 // reset sound effect before playing new hit sound
+    hitSound.play()
+  }
+}
+
 /**
  * Textures
  */
@@ -34,24 +46,10 @@ const environmentMapTexture = cubeTextureLoader.load([
   "/textures/environmentMaps/0/nz.png",
 ])
 
-// Utils
-const createSphere = (radius, position) => {
-  const mesh = new THREE.Mesh(
-    new THREE.SphereBufferGeometry(radius, 20, 20),
-    new THREE.MeshStandardMaterial({
-      metalness: 0.3,
-      roughness: 0.4,
-      envMap: environmentMapTexture,
-    })
-  )
-  mesh.castShadow = true
-  mesh.receiveShadow = true
-  mesh.position.copy(position)
-  scene.add(mesh)
-}
-
 // Physics
 const world = new CANNON.World()
+world.broadphase = new CANNON.SAPBroadphase(world) // better performance for collision detection
+world.allowSleep = true // stop listening to collision detection when body speed becomes very low, it will reactivate from sleep when a strong force is applied to the body
 world.gravity.set(0, -9.82, 0) // negative y of gravity constant on earth (falls down on the y-axis)
 
 // material (not three.js texture material, but physical material of the CANNON body)
@@ -83,6 +81,97 @@ const defaultContactMaterial = new CANNON.ContactMaterial(
 // world.addContactMaterial(concretePlasticContactMaterial)
 // world.addContactMaterial(defaultContactMaterial)
 world.defaultContactMaterial = defaultContactMaterial // set as default contact material for world
+
+// Utils
+const objectsToUpdate = []
+
+const sphereGeometry = new THREE.SphereBufferGeometry(1, 20, 20)
+const boxGeometry = new THREE.BoxBufferGeometry(1, 1, 1)
+
+const material = new THREE.MeshStandardMaterial({
+  metalness: 0.3,
+  roughness: 0.4,
+  envMap: environmentMapTexture,
+})
+
+const createSphere = (radius, position) => {
+  const mesh = new THREE.Mesh(sphereGeometry, material)
+  mesh.scale.set(radius, radius, radius)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+  mesh.position.copy(position)
+  scene.add(mesh)
+
+  // CANNON body
+  const shape = new CANNON.Sphere(radius)
+  const body = new CANNON.Body({
+    shape: shape,
+    mass: 1,
+  })
+  body.position.copy(position)
+  body.addEventListener("collide", playHitSound)
+  world.addBody(body)
+
+  // Objects to update
+  objectsToUpdate.push({
+    mesh: mesh,
+    body: body,
+  })
+}
+
+const createBox = (dimension, position) => {
+  const box = new THREE.Mesh(boxGeometry, material)
+  box.castShadow = true
+  box.receiveShadow = true
+  box.scale.set(dimension, dimension, dimension) // default value of 1, so it scales perfectly
+  box.position.copy(position)
+  scene.add(box)
+
+  // CANNON box is measured in half-extent, which is the length from the box's center to its height/width/depth edges
+  const shape = new CANNON.Box(
+    new CANNON.Vec3(dimension / 2, dimension / 2, dimension / 2)
+  )
+  const body = new CANNON.Body({
+    shape: shape,
+    mass: 1,
+  })
+  body.position.copy(position)
+  body.addEventListener("collide", playHitSound)
+  world.addBody(body)
+
+  objectsToUpdate.push({
+    mesh: box,
+    body: body,
+  })
+}
+
+const guiConfig = {
+  reset: () => {
+    objectsToUpdate.forEach((obj) => {
+      obj.body.removeEventListener("collide", playHitSound)
+      world.remove(obj.body)
+      scene.remove(obj.mesh)
+    })
+  },
+  createSphere: () => {
+    createSphere(Math.random() + 0.35, {
+      x: (Math.random() - 0.5) * 3,
+      y: 3,
+      z: (Math.random() - 0.5) * 3,
+    })
+  },
+  createBox: () => {
+    createBox(Math.random(), {
+      x: (Math.random() - 0.5) * 3,
+      y: 3,
+      z: (Math.random() - 0.5) * 3,
+    })
+  },
+}
+
+gui.add(guiConfig, "reset")
+gui.add(guiConfig, "createSphere")
+gui.add(guiConfig, "createBox")
 
 // body is like a mesh of three.js
 // body shapes include: box, cylinder, plane, sphere, etc.
@@ -195,7 +284,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(0, 3, 3)
+camera.position.set(0, 4, 5)
 scene.add(camera)
 
 // Controls
@@ -205,7 +294,7 @@ controls.enableDamping = true
 /**
  * Renderer
  */
-const renderer = new THREE.WebGLRenderer({ canvas: canvas })
+const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true })
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFSoftShadowMap
 renderer.setSize(sizes.width, sizes.height)
@@ -236,6 +325,10 @@ const tick = () => {
   // Synchronize CANNON physics world with three.js world
   // sphere.position.copy(sphereBody.position)
   // equivalent to sphere.position.set(sphereBody.position.x, sphereBody.position.y, sphereBody.position.z)
+  objectsToUpdate.forEach(({ mesh, body }) => {
+    mesh.position.copy(body.position)
+    mesh.quaternion.copy(body.quaternion)
+  })
 
   // Update controls
   controls.update()
