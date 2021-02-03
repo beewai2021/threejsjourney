@@ -1,7 +1,7 @@
 import * as THREE from "three"
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader"
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js"
 import * as dat from "dat.gui"
 
 import "./style.css"
@@ -19,10 +19,25 @@ const canvas = document.querySelector("canvas.webgl")
 const scene = new THREE.Scene()
 
 /**
+ * Models
+ */
+const dracoLoader = new DRACOLoader()
+dracoLoader.setDecoderPath("/draco/")
+
+const gltfLoader = new GLTFLoader()
+gltfLoader.setDRACOLoader(dracoLoader)
+
+let mixer = null
+
+gltfLoader.load("/models/hamburger.glb", (gltf) => {
+  scene.add(gltf.scene)
+})
+
+/**
  * Floor
  */
 const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(10, 10),
+  new THREE.PlaneGeometry(50, 50),
   new THREE.MeshStandardMaterial({
     color: "#444444",
     metalness: 0,
@@ -58,39 +73,6 @@ const sizes = {
   height: window.innerHeight,
 }
 
-// Model
-const dracoLoader = new DRACOLoader() // instantiate before glTF loader
-dracoLoader.setDecoderPath("/draco/") // web worker & web assembly
-
-const gltfLoader = new GLTFLoader()
-gltfLoader.setDRACOLoader(dracoLoader)
-
-let mixer = null
-
-gltfLoader.load(
-  "/models/Fox/glTF/Fox.gltf",
-  (gltf) => {
-    const model = gltf.scene // import with position/scale/rotation meta settings
-    model.scale.set(0.025, 0.025, 0.025)
-
-    // animation
-    mixer = new THREE.AnimationMixer(model)
-    const animationSurvey = gltf.animations[0]
-    const animationWalk = gltf.animations[1]
-    const animationRun = gltf.animations[2]
-    const action = mixer.clipAction(animationWalk)
-    action.play()
-
-    scene.add(model)
-  },
-  (progress) => {
-    console.log((progress.loaded / progress.total) * 100 + "%")
-  },
-  (error) => {
-    throw error
-  }
-)
-
 window.addEventListener("resize", () => {
   // Update sizes
   sizes.width = window.innerWidth
@@ -115,12 +97,12 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(2, 2, 2)
+camera.position.set(-8, 4, 8)
 scene.add(camera)
 
 // Controls
 const controls = new OrbitControls(camera, canvas)
-controls.target.set(0, 0.75, 0)
+controls.target.set(0, 1, 0)
 controls.enableDamping = true
 
 /**
@@ -145,11 +127,12 @@ const tick = () => {
   const deltaTime = elapsedTime - previousTime
   previousTime = elapsedTime
 
+  if (mixer) {
+    mixer.update(deltaTime)
+  }
+
   // Update controls
   controls.update()
-
-  // animation mixer
-  mixer && mixer.update(deltaTime)
 
   // Render
   renderer.render(scene, camera)
