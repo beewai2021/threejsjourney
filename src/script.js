@@ -1,4 +1,6 @@
 import * as THREE from "three"
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader"
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import * as dat from "dat.gui"
 
@@ -56,6 +58,39 @@ const sizes = {
   height: window.innerHeight,
 }
 
+// Model
+const dracoLoader = new DRACOLoader() // instantiate before glTF loader
+dracoLoader.setDecoderPath("/draco/") // web worker & web assembly
+
+const gltfLoader = new GLTFLoader()
+gltfLoader.setDRACOLoader(dracoLoader)
+
+let mixer = null
+
+gltfLoader.load(
+  "/models/Fox/glTF/Fox.gltf",
+  (gltf) => {
+    const model = gltf.scene // import with position/scale/rotation meta settings
+    model.scale.set(0.025, 0.025, 0.025)
+
+    // animation
+    mixer = new THREE.AnimationMixer(model)
+    const animationSurvey = gltf.animations[0]
+    const animationWalk = gltf.animations[1]
+    const animationRun = gltf.animations[2]
+    const action = mixer.clipAction(animationWalk)
+    action.play()
+
+    scene.add(model)
+  },
+  (progress) => {
+    console.log((progress.loaded / progress.total) * 100 + "%")
+  },
+  (error) => {
+    throw error
+  }
+)
+
 window.addEventListener("resize", () => {
   // Update sizes
   sizes.width = window.innerWidth
@@ -112,6 +147,9 @@ const tick = () => {
 
   // Update controls
   controls.update()
+
+  // animation mixer
+  mixer && mixer.update(deltaTime)
 
   // Render
   renderer.render(scene, camera)
