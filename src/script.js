@@ -202,8 +202,6 @@ const tick = () => {
   // Update controls
   controls.update()
 
-  //   directionalLightCameraHelper.update()
-
   // Render
   renderer.render(scene, camera)
 
