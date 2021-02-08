@@ -1,7 +1,7 @@
 import * as THREE from "three"
-import * as dat from "dat.gui"
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
+import * as dat from "dat.gui"
 
 import "./style.css"
 
@@ -10,8 +10,6 @@ import "./style.css"
  */
 // Debug
 const gui = new dat.GUI()
-gui.width = 350
-const debugObject = {}
 
 // Canvas
 const canvas = document.querySelector("canvas.webgl")
@@ -19,93 +17,67 @@ const canvas = document.querySelector("canvas.webgl")
 // Scene
 const scene = new THREE.Scene()
 
-// Lights
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.82)
-directionalLight.position.set(0.25, 3, -2.25)
-directionalLight.castShadow = true
-// directionalLight.shadow.bias = 0.05 // helps with shadow acene for flat surfaces
-// directionalLight.shadow.normalBias = 0.05 // helps with shadow acene for rounded surfaces (shrinking burger smaller so that it doesnt cast shadows on itself) 0.00 <---> 0.05 should be enough
-scene.add(directionalLight)
-// const directionalLightCameraHelper = new THREE.CameraHelper(
-//   directionalLight.shadow.camera
-// )
-// scene.add(directionalLightCameraHelper)
-directionalLight.shadow.camera.far = 10
-directionalLight.shadow.mapSize.height = 512 * 2
-directionalLight.shadow.mapSize.width = 512 * 2
-
-const directionalLightFolder = gui.addFolder("dirLight")
-directionalLightFolder.open()
-directionalLightFolder.add(directionalLight, "intensity", 0, 10, 0.001)
-directionalLightFolder.add(directionalLight.position, "x", -5, 5, 0.001)
-directionalLightFolder.add(directionalLight.position, "y", -5, 5, 0.001)
-directionalLightFolder.add(directionalLight.position, "z", -5, 5, 0.001)
-
-// Env Map
+/**
+ * Loaders
+ */
+const gltfLoader = new GLTFLoader()
 const cubeTextureLoader = new THREE.CubeTextureLoader()
-const envMap = cubeTextureLoader.load(
-  [
-    "/textures/environmentMaps/3/px.jpg",
-    "/textures/environmentMaps/3/nx.jpg",
-    "/textures/environmentMaps/3/py.jpg",
-    "/textures/environmentMaps/3/ny.jpg",
-    "/textures/environmentMaps/3/pz.jpg",
-    "/textures/environmentMaps/3/nz.jpg",
-  ],
-  () => console.log("loading textures")
-)
+const textureLoader = new THREE.TextureLoader()
 
-envMap.encoding = THREE.sRGBEncoding // apply srgb encoding to the texture itself
-scene.background = new THREE.Color(0x2f2f2f)
-// scene.background = envMap
-// scene.environment = envMap // applies env map to every material in scene, although dont use this for normal maps
-
-// Update all materials
-const updateAllMaterial = () => {
+/**
+ * Update all materials
+ */
+const updateAllMaterials = () => {
   scene.traverse((child) => {
-    // test if child is a mesh and its material is of MeshStandardMaterial
     if (
       child instanceof THREE.Mesh &&
       child.material instanceof THREE.MeshStandardMaterial
     ) {
+      child.material.envMapIntensity = 5
+      child.material.needsUpdate = true
       child.castShadow = true
       child.receiveShadow = true
-      child.material.envMap = envMap
-      child.material.envMapIntensity = debugObject.envMapIntensity
-      child.material.needsUpdate = true
     }
   })
 }
 
-const envMapFolder = gui.addFolder("envMap")
-debugObject.envMapIntensity = 5
-envMapFolder.open()
-envMapFolder
-  .add(debugObject, "envMapIntensity", 0, 10, 0.001)
-  .onChange(updateAllMaterial)
+/**
+ * Environment map
+ */
+const environmentMap = cubeTextureLoader.load([
+  "/textures/environmentMaps/0/px.jpg",
+  "/textures/environmentMaps/0/nx.jpg",
+  "/textures/environmentMaps/0/py.jpg",
+  "/textures/environmentMaps/0/ny.jpg",
+  "/textures/environmentMaps/0/pz.jpg",
+  "/textures/environmentMaps/0/nz.jpg",
+])
+environmentMap.encoding = THREE.sRGBEncoding
 
-// Model
-const gltfLoader = new GLTFLoader()
-gltfLoader.load(
-  "/models/FlightHelmet/glTF/FlightHelmet.gltf",
-  (gltf) => {
-    const model = gltf.scene
-    model.scale.set(10, 10, 10)
-    model.position.y = -3
-    model.rotation.y = Math.PI / 1.5
-    scene.add(model)
+scene.background = environmentMap
+scene.environment = environmentMap
 
-    const modelFolder = gui.addFolder("model")
-    modelFolder.open()
-    modelFolder
-      .add(model.rotation, "y", -Math.PI, Math.PI, 0.001)
-      .name("modelRotation")
+/**
+ * Models
+ */
+gltfLoader.load("/models/DamagedHelmet/glTF/DamagedHelmet.gltf", (gltf) => {
+  gltf.scene.scale.set(2, 2, 2)
+  gltf.scene.rotation.y = Math.PI * 0.5
+  scene.add(gltf.scene)
 
-    updateAllMaterial()
-    // GLTFLoader automatically applies the correct encoding to the model's textures
-  },
-  () => console.log("loading model")
-)
+  updateAllMaterials()
+})
+
+/**
+ * Lights
+ */
+const directionalLight = new THREE.DirectionalLight("#ffffff", 3)
+directionalLight.castShadow = true
+directionalLight.shadow.mapSize.set(1024, 1024)
+directionalLight.shadow.camera.far = 15
+directionalLight.shadow.normalBias = 0.05
+directionalLight.position.set(0.25, 3, -2.25)
+scene.add(directionalLight)
 
 /**
  * Sizes
@@ -139,57 +111,37 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(3.33, 1.39, -5.6)
+camera.position.set(4, 1, -4)
 scene.add(camera)
 
 // Controls
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
-controls.autoRotate = 1
-controls.autoRotateSpeed = 0.5
-// controls.addEventListener("change", (e) => console.log(e))
 
 /**
  * Renderer
  */
-// super sampling (SSAA) multiples 4 times the pixels for every pixel. High performance cost
-// multi sampling (MSAA) applies SSAA only for pixels near the edges, this is the default anti alias option for three.js
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
-  antialias: window.devicePixelRatio < 2 ? true : false,
+  antialias: true,
 })
+renderer.shadowMap.enabled = true
+renderer.shadowMap.type = THREE.PCFShadowMap
+renderer.physicallyCorrectLights = true
+renderer.outputEncoding = THREE.sRGBEncoding
+renderer.toneMapping = THREE.ReinhardToneMapping
+renderer.toneMappingExposure = 1.5
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-renderer.physicallyCorrectLights = true
-renderer.outputEncoding = THREE.sRGBEncoding // more precise lighting from bright to dark
-renderer.shadowMap.enabled = true
-renderer.shadowMap.type = THREE.PCFSoftShadowMap
-// tonemapping is converting HDR values to LDR values with algorithims to between 0 <---> 1
-renderer.toneMapping = THREE.ReinhardToneMapping
-renderer.toneMappingExposure = 3
-
-// select options for tone mapping
-const toneMappingFolder = gui.addFolder("toneMapping")
-toneMappingFolder.open()
-toneMappingFolder
-  .add(renderer, "toneMapping", {
-    none: THREE.NoToneMapping,
-    Linear: THREE.LinearToneMapping,
-    Reinhard: THREE.ReinhardToneMapping,
-    Cineon: THREE.CineonToneMapping,
-    ACESFilmic: THREE.ACESFilmicToneMapping,
-  })
-  .onFinishChange(() => {
-    // dat.gui bug, we have to convert stringified select option back to number format
-    renderer.toneMapping = Number(renderer.toneMapping)
-    updateAllMaterial() // update material for model
-  })
-toneMappingFolder.add(renderer, "toneMappingExposure", 0, 2, 0.001) // how much light the renderer will let in
 
 /**
  * Animate
  */
+const clock = new THREE.Clock()
+
 const tick = () => {
+  const elapsedTime = clock.getElapsedTime()
+
   // Update controls
   controls.update()
 
