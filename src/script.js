@@ -8,6 +8,7 @@ import "./style.css"
 /**
  * Loaders
  */
+let sceneReady = false
 const loadingBarElement = document.querySelector(".loading-bar")
 const loadingManager = new THREE.LoadingManager(
   // Loaded
@@ -25,6 +26,10 @@ const loadingManager = new THREE.LoadingManager(
       loadingBarElement.classList.add("ended")
       loadingBarElement.style.transform = ""
     }, 500)
+
+    window.setTimeout(() => {
+      sceneReady = true
+    }, 3000)
   },
 
   // Progress
@@ -119,11 +124,29 @@ debugObject.envMapIntensity = 5
  */
 gltfLoader.load("/models/DamagedHelmet/glTF/DamagedHelmet.gltf", (gltf) => {
   gltf.scene.scale.set(2.5, 2.5, 2.5)
-  gltf.scene.rotation.y = Math.PI * 0.5
+  // gltf.scene.rotation.y = Math.PI * 0.5
   scene.add(gltf.scene)
 
   updateAllMaterials()
 })
+
+const raycaster = new THREE.Raycaster()
+
+// Points of interest
+const points = [
+  {
+    position: new THREE.Vector3(1.55, 0.3, -0.6),
+    element: document.querySelector(".point-0"),
+  },
+  {
+    position: new THREE.Vector3(0.5, 0.8, -1.6),
+    element: document.querySelector(".point-1"),
+  },
+  {
+    position: new THREE.Vector3(1.6, -1.3, -0.7),
+    element: document.querySelector(".point-2"),
+  },
+]
 
 /**
  * Lights
@@ -168,7 +191,8 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(4, 1, -4)
+// camera.position.set(4, 1, -4)
+camera.position.set(0, 0, 6)
 scene.add(camera)
 
 // Controls
@@ -197,6 +221,32 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 const tick = () => {
   // Update controls
   controls.update()
+
+  // put after orbit controls update to keep transformation in sync
+  // update points of interest position
+  if (sceneReady) {
+    points.forEach((point) => {
+      const screenPosition = point.position.clone()
+      screenPosition.project(camera) // normalise coordinates to -1 <---> 1
+      const translateX = screenPosition.x * sizes.width * 0.5 // half of screen width (normalized)
+      const translateY = -screenPosition.y * sizes.height * 0.5 // half of screen width
+      point.element.style.transform = `translate3d(${translateX}px, ${translateY}px, 0)`
+      raycaster.setFromCamera(screenPosition, camera)
+      const intersects = raycaster.intersectObjects(scene.children, true) // recursive, raycast against every child of the scene, and its children (all objects)
+      if (intersects.length === 0) {
+        point.element.classList.add("visible")
+      } else {
+        const intersectionDistance = intersects[0].distance // first item is closest intersection
+        const pointDistance = point.position.distanceTo(camera.position) // closest intersection distance from camera
+
+        if (intersectionDistance < pointDistance) {
+          point.element.classList.remove("visible")
+        } else {
+          point.element.classList.add("visible")
+        }
+      }
+    })
+  }
 
   // Render
   renderer.render(scene, camera)
