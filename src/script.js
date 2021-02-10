@@ -136,6 +136,8 @@ const raycaster = new THREE.Raycaster()
 const points = [
   {
     position: new THREE.Vector3(1.55, 0.3, -0.6),
+    // html element should be created here with javascript
+    // instead of querying an existing dom element
     element: document.querySelector(".point-0"),
   },
   {
@@ -202,10 +204,7 @@ controls.enableDamping = true
 /**
  * Renderer
  */
-const renderer = new THREE.WebGLRenderer({
-  canvas: canvas,
-  antialias: true,
-})
+const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true })
 renderer.physicallyCorrectLights = true
 renderer.outputEncoding = THREE.sRGBEncoding
 renderer.toneMapping = THREE.ReinhardToneMapping
