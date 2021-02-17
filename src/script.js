@@ -4,6 +4,9 @@ import * as dat from "dat.gui"
 
 import "./style.css"
 
+import vertexShader from "./shaders/vertex.glsl"
+import fragmentShader from "./shaders/fragment.glsl"
+
 /**
  * Base
  */
@@ -28,7 +31,17 @@ const textureLoader = new THREE.TextureLoader()
 const geometry = new THREE.PlaneGeometry(1, 1, 32, 32)
 
 // Material
-const material = new THREE.MeshBasicMaterial()
+const material = new THREE.RawShaderMaterial({
+  vertexShader: vertexShader,
+  fragmentShader: fragmentShader,
+  // common material properties
+  // wireframe: true,
+  // transparent: true,
+  // flatShading: true,
+  // side: THREE.DoubleSide,
+  // material properties require re-write in shaders
+  // map, alphaMap, opacity, color
+})
 
 // Mesh
 const mesh = new THREE.Mesh(geometry, material)
