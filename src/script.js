@@ -19,6 +19,9 @@ const canvas = document.querySelector("canvas.webgl")
 // Scene
 const scene = new THREE.Scene()
 
+// const axesHelper = new THREE.AxesHelper(3)
+// scene.add(axesHelper)
+
 /**
  * Textures
  */
@@ -28,17 +31,26 @@ const textureLoader = new THREE.TextureLoader()
  * Test mesh
  */
 // Geometry
-const geometry = new THREE.PlaneGeometry(1, 1, 32, 32)
+const geometry = new THREE.PlaneGeometry(1, 1, 60, 60)
+const posCount = geometry.attributes.position.count // count of vertices
+const posCountFloat32Array = new Float32Array(posCount)
+for (let i = 0; i < posCount; i++) {
+  posCountFloat32Array[i] = Math.random() // randomise positions
+}
+geometry.setAttribute(
+  "aRandom",
+  new THREE.Float32BufferAttribute(posCountFloat32Array, 1)
+)
 
 // Material
 const material = new THREE.RawShaderMaterial({
   vertexShader: vertexShader,
   fragmentShader: fragmentShader,
   // common material properties
-  // wireframe: true,
-  // transparent: true,
+  wireframe: false,
+  transparent: true,
   // flatShading: true,
-  // side: THREE.DoubleSide,
+  side: THREE.DoubleSide,
   // material properties require re-write in shaders
   // map, alphaMap, opacity, color
 })
@@ -79,12 +91,13 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(0.25, -0.25, 1)
+camera.position.set(0.64, 0.81, 0.99)
 scene.add(camera)
 
 // Controls
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
+// controls.addEventListener("change", (e) => console.log(e.target.object))
 
 /**
  * Renderer
