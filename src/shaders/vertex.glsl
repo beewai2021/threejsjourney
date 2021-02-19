@@ -3,11 +3,16 @@ uniform mat4 projectionMatrix; // clipspace coordinates (normalized), transform 
 uniform mat4 viewMatrix; // position based on camera position/fov/near/far/rotation
 uniform mat4 modelMatrix; // position based on mesh position/rotation/scale in the world world, rather than local space
 // uniform mat4 modelViewMatrix; // modelMatrix * viewMatrix
+uniform vec2 uFrequency;
+uniform float uTime;
 
 attribute vec3 position; // different position for each vertex (x,y,z), at local space. Float32BufferAttributes
 attribute float aRandom; // custom created attribute, a for attributes
+attribute vec2 uv;
 
-varying float vRandom;
+// varying float vRandom;
+varying vec2 vUv;
+varying float vElevation;
 
 // float sum(float a, float b) {
 //     return a + b;
@@ -30,14 +35,20 @@ void main() {
     // gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
     // gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
+
     vec4 modelPos = modelMatrix * vec4(position, 1.0); // world space position
 
-    float waveFrequency = 7.0;
     float waveStrength = 0.08;
-    // modelPos.z = modelPos.z + sin(modelPos.x * waveFrequency) * waveStrength;
-    modelPos.z = aRandom * waveStrength;
 
-    vRandom = aRandom; // pass varying to fragment shader
+    float elevation = sin(modelPos.x * uFrequency.x - uTime) * waveStrength;
+    elevation += sin(modelPos.y * uFrequency.y - uTime) * waveStrength;
+
+    modelPos.z += elevation;
+
+    // pass varying to fragment shader
+    // vRandom = aRandom; 
+    vUv = uv;
+    vElevation = elevation;
 
     vec4 viewPos = viewMatrix * modelPos; // camera projection
     vec4 projectionPos = projectionMatrix * viewPos;

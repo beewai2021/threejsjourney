@@ -26,6 +26,7 @@ const scene = new THREE.Scene()
  * Textures
  */
 const textureLoader = new THREE.TextureLoader()
+const flagTexture = textureLoader.load("/textures/share-image.png")
 
 /**
  * Test mesh
@@ -46,14 +47,22 @@ geometry.setAttribute(
 const material = new THREE.RawShaderMaterial({
   vertexShader: vertexShader,
   fragmentShader: fragmentShader,
+  uniforms: {
+    uFrequency: { value: new THREE.Vector2(8.63, 1.448) },
+    uTime: { value: 0 },
+    uColor: { value: new THREE.Color(0, 48, 210, 1) },
+    uTexture: { value: flagTexture },
+  },
   // common material properties
   wireframe: false,
-  transparent: true,
+  // transparent: true,
   // flatShading: true,
-  side: THREE.DoubleSide,
+  side: THREE.FrontSide,
   // material properties require re-write in shaders
   // map, alphaMap, opacity, color
 })
+// gui.add(material.uniforms.uFrequency.value, "x", 0, 20, 0.01).name("frequencyX")
+// gui.add(material.uniforms.uFrequency.value, "y", 0, 2, 0.001).name("frequencyY")
 
 // Mesh
 const mesh = new THREE.Mesh(geometry, material)
@@ -91,12 +100,16 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(0.64, 0.81, 0.99)
+camera.position.set(-0.22, 0.0375, 0.9)
 scene.add(camera)
 
 // Controls
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
+controls.enableRotate = false
+controls.enablePan = false
+controls.enableZoom = false
+controls.target = new THREE.Vector3(0.5, 0, 0)
 // controls.addEventListener("change", (e) => console.log(e.target.object))
 
 /**
@@ -115,6 +128,8 @@ const clock = new THREE.Clock()
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
+
+  material.uniforms.uTime.value = elapsedTime
 
   // Update controls
   controls.update()
