@@ -33,7 +33,8 @@ const flagTexture = textureLoader.load("/textures/share-image.png")
  */
 // Geometry
 const geometry = new THREE.PlaneGeometry(1, 1, 60, 60)
-const posCount = geometry.attributes.position.count // count of vertices
+// using the same vertices count based on default position attribute
+const posCount = geometry.attributes.position.count
 const posCountFloat32Array = new Float32Array(posCount)
 for (let i = 0; i < posCount; i++) {
   posCountFloat32Array[i] = Math.random() // randomise positions
