@@ -2,7 +2,7 @@
 // uniform mat4 projectionMatrix; // clipspace coordinates (normalized), transform 3d space into 2d screen, discards coordinates outside of range, and remaining coordinates end up as visible fragments 
 // uniform mat4 viewMatrix; // position based on camera position/fov/near/far/rotation
 // uniform mat4 modelMatrix; // position based on mesh position/rotation/scale in the world world, rather than local space
-// // uniform mat4 modelViewMatrix; // modelMatrix * viewMatrix
+// uniform mat4 modelViewMatrix; // modelMatrix * viewMatrix
 
 // custom uniforms passed from js
 uniform vec2 uFrequency;
