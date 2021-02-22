@@ -18,6 +18,7 @@ const canvas = document.querySelector("canvas.webgl")
 
 // Scene
 const scene = new THREE.Scene()
+scene.background = new THREE.Color("lightgray")
 
 // const axesHelper = new THREE.AxesHelper(3)
 // scene.add(axesHelper)
@@ -44,29 +45,45 @@ geometry.setAttribute(
   new THREE.Float32BufferAttribute(posCountFloat32Array, 1)
 )
 
-// Material
-const material = new THREE.RawShaderMaterial({
-  vertexShader: vertexShader,
-  fragmentShader: fragmentShader,
+// Raw Shader Material (need to declare own uniforms/attributes/precision)
+// const rawShaderMaterial = new THREE.RawShaderMaterial({
+//   vertexShader: vertexShader,
+//   fragmentShader: fragmentShader,
+//   uniforms: {
+//     uFrequency: { value: new THREE.Vector2(8.63, 1.448) },
+//     uTime: { value: 0 },
+//     uColor: { value: new THREE.Color(0, 48, 210, 1) },
+//     uTexture: { value: flagTexture },
+//   },
+//   // common material properties
+//   wireframe: false,
+//   // transparent: true,
+//   // flatShading: true,
+//   side: THREE.FrontSide,
+//   // material properties require re-write in shaders
+//   // map, alphaMap, opacity, color
+// })
+// gui.add(material.uniforms.uFrequency.value, "x", 0, 20, 0.01).name("frequencyX")
+// gui.add(material.uniforms.uFrequency.value, "y", 0, 2, 0.001).name("frequencyY")
+
+// Shader material (with built in variables passed by threejs)
+// dont have to explicit declare projectionMatrix, viewMatrix, modelMatrix, position, uv, precision
+// can reference directly in code
+const shaderMaterial = new THREE.ShaderMaterial({
+  vertexShader,
+  fragmentShader,
   uniforms: {
     uFrequency: { value: new THREE.Vector2(8.63, 1.448) },
     uTime: { value: 0 },
     uColor: { value: new THREE.Color(0, 48, 210, 1) },
     uTexture: { value: flagTexture },
   },
-  // common material properties
   wireframe: false,
-  // transparent: true,
-  // flatShading: true,
   side: THREE.FrontSide,
-  // material properties require re-write in shaders
-  // map, alphaMap, opacity, color
 })
-// gui.add(material.uniforms.uFrequency.value, "x", 0, 20, 0.01).name("frequencyX")
-// gui.add(material.uniforms.uFrequency.value, "y", 0, 2, 0.001).name("frequencyY")
 
 // Mesh
-const mesh = new THREE.Mesh(geometry, material)
+const mesh = new THREE.Mesh(geometry, shaderMaterial)
 scene.add(mesh)
 
 /**
@@ -130,7 +147,8 @@ const clock = new THREE.Clock()
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
 
-  material.uniforms.uTime.value = elapsedTime
+  // update custom uniform value
+  shaderMaterial.uniforms.uTime.value = elapsedTime
 
   // Update controls
   controls.update()

@@ -1,4 +1,4 @@
-precision mediump float; // precision level of float values (lowp, mediump, highp), high precision is more performance heavy, and might not work on all devices. lowp may cause bugs based on lack of precision
+// precision mediump float; // precision level of float values (lowp, mediump, highp), high precision is more performance heavy, and might not work on all devices. lowp may cause bugs based on lack of precision
 
 // custom uniforms passed from js
 uniform vec3 uColor;

@@ -1,18 +1,18 @@
-// uniforms carry same value for each vertex (mat4 for vec4 of position)
-uniform mat4 projectionMatrix; // clipspace coordinates (normalized), transform 3d space into 2d screen, discards coordinates outside of range, and remaining coordinates end up as visible fragments 
-uniform mat4 viewMatrix; // position based on camera position/fov/near/far/rotation
-uniform mat4 modelMatrix; // position based on mesh position/rotation/scale in the world world, rather than local space
-// uniform mat4 modelViewMatrix; // modelMatrix * viewMatrix
+// // uniforms carry same value for each vertex (mat4 for vec4 of position)
+// uniform mat4 projectionMatrix; // clipspace coordinates (normalized), transform 3d space into 2d screen, discards coordinates outside of range, and remaining coordinates end up as visible fragments 
+// uniform mat4 viewMatrix; // position based on camera position/fov/near/far/rotation
+// uniform mat4 modelMatrix; // position based on mesh position/rotation/scale in the world world, rather than local space
+// // uniform mat4 modelViewMatrix; // modelMatrix * viewMatrix
 
 // custom uniforms passed from js
 uniform vec2 uFrequency;
 uniform float uTime;
 
-attribute vec3 position; // different position for each vertex (x,y,z), at local space. Float32BufferAttributes
+// attribute vec3 position; // different position for each vertex (x,y,z), at local space. Float32BufferAttributes
 
 // custom attributes from custom made geometry attributes from js
 attribute float aRandom; // custom created attributes, "a" for attributes
-attribute vec2 uv;
+// attribute vec2 uv;
 
 // passing varyings to fragment shaders
 // varying float vRandom;
@@ -37,7 +37,7 @@ void main() {
 
     float waveStrength = 0.08;
 
-    
+    // sin wave elevation based on uniform time thats updated every next frame
     float elevation = sin(modelPos.x * uFrequency.x - uTime) * waveStrength;
     elevation += sin(modelPos.y * uFrequency.y - uTime) * waveStrength;
 
