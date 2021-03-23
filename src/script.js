@@ -123,7 +123,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(4, 1, -4)
+camera.position.set(4, 1, -18)
 scene.add(camera)
 
 // Controls
@@ -168,7 +168,8 @@ const customRenderTarget = new RenderTargetClass(
     minFilter: THREE.LinearFilter,
     magFilter: THREE.LinearFilter,
     format: THREE.RGBAFormat,
-    encoding: THREE.sRGBEncoding, // fix three.js effect composer render target output encoding when having multiple passes
+    // to compensate for the disabled sRGBEncoding for the renderer when using other passes
+    encoding: THREE.sRGBEncoding,
   }
 )
 
@@ -212,6 +213,77 @@ unrealBloomPass.radius = 1.362
 gui.add(unrealBloomPass, "enabled")
 effectComposer.addPass(unrealBloomPass)
 
+// custom tint shader pass
+const tintShader = {
+  // t for texture
+  uniforms: { tDiffuse: { value: null }, uTint: { value: null } },
+  vertexShader: `
+    varying vec2 vUv;
+
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform vec3 uTint;
+    varying vec2 vUv;
+
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      color.rgb += uTint;
+      gl_FragColor = color;
+    }
+  `,
+}
+const TintPass = new ShaderPass(tintShader)
+TintPass.material.uniforms.uTint.value = new THREE.Vector3(0, 0.085, 0.106)
+effectComposer.addPass(TintPass)
+
+gui.add(TintPass.material.uniforms.uTint.value, "x", 0, 1, 0.001).name("r")
+gui.add(TintPass.material.uniforms.uTint.value, "y", 0, 1, 0.001).name("g")
+gui.add(TintPass.material.uniforms.uTint.value, "z", 0, 1, 0.001).name("b")
+
+// custom displacement pass
+const displacementShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    uTime: null,
+    uNormalMap: { value: null },
+  },
+  vertexShader: `
+    varying vec2 vUv;
+
+    void main() {
+      vUv = uv;
+      
+      gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform sampler2D uNormalMap;
+    // uniform float uTime;
+    
+    varying vec2 vUv;
+
+    void main() {
+      vec3 normalColor = texture2D(uNormalMap, vUv).rgb * 2.0 - 1.0;
+      vec2 newUv = vUv + normalColor.xy * 0.1;
+      vec4 color = texture2D(tDiffuse, newUv);
+      
+      gl_FragColor = color;
+    }
+  `,
+}
+const DisplacementPass = new ShaderPass(displacementShader)
+const interfaceNormalMap = textureLoader.load(
+  "/textures/interfaceNormalMap.png"
+)
+DisplacementPass.material.uniforms.uNormalMap = interfaceNormalMap
+effectComposer.addPass(DisplacementPass)
+
 // smaa has to be at the last pass in order
 // cost to performance
 // use smaa pass as a last resort
@@ -228,6 +300,8 @@ const clock = new THREE.Clock()
 
 const tick = () => {
   const elapsedTime = clock.getElapsedTime()
+
+  DisplacementPass.material.uniforms.uTime.value = elapsedTime
 
   // Update controls
   controls.update()
