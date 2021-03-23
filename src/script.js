@@ -1,14 +1,27 @@
 import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
+import gsap from "gsap"
 
 import "./style.css"
 
 /**
  * Loaders
  */
-const gltfLoader = new GLTFLoader()
-const cubeTextureLoader = new THREE.CubeTextureLoader()
+const loadingManager = new THREE.LoadingManager()
+loadingManager.onProgress = () => {
+  console.log("loading")
+}
+loadingManager.onLoad = () => {
+  console.log("loaded")
+  gsap.to(overlayGeometry.material.uniforms.uAlpha, {
+    duration: 3,
+    value: 0,
+  })
+}
+
+const gltfLoader = new GLTFLoader(loadingManager)
+const cubeTextureLoader = new THREE.CubeTextureLoader(loadingManager)
 
 /**
  * Base
@@ -21,6 +34,32 @@ const canvas = document.querySelector("canvas.webgl")
 
 // Scene
 const scene = new THREE.Scene()
+
+// Overlay
+const overlayGeometry = new THREE.Mesh(
+  // clip space goes from -1 <---> 1, hence plane size of 2 will cover screen
+  new THREE.PlaneBufferGeometry(2, 2),
+  new THREE.ShaderMaterial({
+    uniforms: { uAlpha: { value: null } },
+    vertexShader: `
+      void main() {
+        // just use clip space, without modifying it to fit world space
+        gl_Position = vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uAlpha;
+
+      void main() {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha);
+      }
+    `,
+    transparent: true,
+    // wireframe: true,
+  })
+)
+overlayGeometry.material.uniforms.uAlpha.value = 1.0 // loader alpha visible at start
+scene.add(overlayGeometry)
 
 /**
  * Update all materials
@@ -114,7 +153,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 )
-camera.position.set(4, 1, -4)
+camera.position.set(4, 1, -15)
 scene.add(camera)
 
 // Controls
