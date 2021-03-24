@@ -1,7 +1,14 @@
 import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
+import Stats from "stats.js"
+import { BufferGeometryUtils } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 
 import "./style.css"
+
+// Stats
+const stats = new Stats()
+stats.showPanel(0)
+document.body.appendChild(stats.dom)
 
 /**
  * Base
@@ -78,7 +85,7 @@ const cube = new THREE.Mesh(
   new THREE.MeshStandardMaterial()
 )
 cube.castShadow = true
-cube.receiveShadow = true
+cube.receiveShadow = false
 cube.position.set(-5, 0, 0)
 scene.add(cube)
 
@@ -87,7 +94,7 @@ const torusKnot = new THREE.Mesh(
   new THREE.MeshStandardMaterial()
 )
 torusKnot.castShadow = true
-torusKnot.receiveShadow = true
+torusKnot.receiveShadow = false
 scene.add(torusKnot)
 
 const sphere = new THREE.Mesh(
@@ -106,7 +113,7 @@ const floor = new THREE.Mesh(
 floor.position.set(0, -2, 0)
 floor.rotation.x = -Math.PI * 0.5
 floor.castShadow = true
-floor.receiveShadow = true
+floor.receiveShadow = false
 scene.add(floor)
 
 /**
@@ -126,6 +133,8 @@ scene.add(directionalLight)
 const clock = new THREE.Clock()
 
 const tick = () => {
+  stats.begin()
+
   const elapsedTime = clock.getElapsedTime()
 
   // Update test mesh
@@ -139,6 +148,8 @@ const tick = () => {
 
   // Call tick again on the next frame
   window.requestAnimationFrame(tick)
+
+  stats.end()
 }
 
 tick()
@@ -179,6 +190,7 @@ tick()
 // floor.castShadow = false
 // floor.receiveShadow = true
 
+// deactivate shadows for static objects
 // // Tip 12
 // renderer.shadowMap.autoUpdate = false
 // renderer.shadowMap.needsUpdate = true
@@ -217,26 +229,10 @@ tick()
 //     scene.add(mesh)
 // }
 
+// Mutualising geometries and material
+
 // // Tip 20
 // const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5)
-
-// for(let i = 0; i < 50; i++)
-// {
-//     const material = new THREE.MeshNormalMaterial()
-
-//     const mesh = new THREE.Mesh(geometry, material)
-//     mesh.position.x = (Math.random() - 0.5) * 10
-//     mesh.position.y = (Math.random() - 0.5) * 10
-//     mesh.position.z = (Math.random() - 0.5) * 10
-//     mesh.rotation.x = (Math.random() - 0.5) * Math.PI * 2
-//     mesh.rotation.y = (Math.random() - 0.5) * Math.PI * 2
-
-//     scene.add(mesh)
-// }
-
-// // Tip 22
-// const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5)
-
 // const material = new THREE.MeshNormalMaterial()
 
 // for(let i = 0; i < 50; i++)
@@ -251,66 +247,75 @@ tick()
 //     scene.add(mesh)
 // }
 
+// // Tip 22
+const geometries = []
+for (let i = 0; i < 50; i++) {
+  const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5)
+  geometry.rotateX((Math.random() - 0.5) * Math.PI * 2)
+  geometry.rotateY((Math.random() - 0.5) * Math.PI * 2)
+  geometry.translate(
+    (Math.random() - 0.5) * 10,
+    (Math.random() - 0.5) * 10,
+    (Math.random() - 0.5) * 10
+  )
+  geometries.push(geometry)
+}
+// Merge multiple geometries into one geometry to prevent multiple draw calls
+const mergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geometries)
+const material = new THREE.MeshNormalMaterial()
+const boxes = new THREE.Mesh(mergedGeometry, material)
+scene.add(boxes)
+
 // // Tip 29
-// renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
 // // Tip 31, 32, 34 and 35
-// const shaderGeometry = new THREE.PlaneGeometry(10, 10, 256, 256)
+const shaderGeometry = new THREE.PlaneGeometry(10, 10, 256, 256)
 
-// const shaderMaterial = new THREE.ShaderMaterial({
-//     uniforms:
-//     {
-//         uDisplacementTexture: { value: displacementTexture },
-//         uDisplacementStrength: { value: 1.5 }
-//     },
-//     vertexShader: `
-//         uniform sampler2D uDisplacementTexture;
-//         uniform float uDisplacementStrength;
+const shaderMaterial = new THREE.ShaderMaterial({
+  uniforms: { uDisplacementTexture: { value: displacementTexture } },
+  vertexShader: `
+        #define DISPLACEMENT_STRENGTH 1.5;
+        uniform sampler2D uDisplacementTexture;
 
-//         varying vec2 vUv;
+        varying vec2 vUv;
+        varying vec3 vColor;
 
-//         void main()
-//         {
-//             vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+        void main()
+        {
+            // Position
+            vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+            float elevation = texture2D(uDisplacementTexture, uv).r;
+            modelPosition.y += clamp(elevation, 0.5, 1.0) * DISPLACEMENT_STRENGTH;
+            
+            // Color
+            float colorElevation = max(elevation, 0.25);
+            vec3 depthColor = vec3(1.0, 0.1, 0.1);
+            vec3 surfaceColor = vec3(0.1, 0.0, 0.5);
+            vec3 color = mix(depthColor, surfaceColor, colorElevation);
+            
+            vUv = uv;
+            vColor = color;
+            
+            gl_Position = projectionMatrix * viewMatrix * modelPosition;
+        }
+    `,
+  fragmentShader: `
+        uniform sampler2D uDisplacementTexture;
 
-//             float elevation = texture2D(uDisplacementTexture, uv).r;
-//             if(elevation < 0.5)
-//             {
-//                 elevation = 0.5;
-//             }
+        varying vec2 vUv;
+        varying vec3 vColor;
 
-//             modelPosition.y += elevation * uDisplacementStrength;
+        void main()
+        {
+            float elevation = texture2D(uDisplacementTexture, vUv).r;
+            elevation = max(elevation, 0.25);
 
-//             gl_Position = projectionMatrix * viewMatrix * modelPosition;
+            gl_FragColor = vec4(vColor, 1.0);
+        }
+    `,
+})
 
-//             vUv = uv;
-//         }
-//     `,
-//     fragmentShader: `
-//         uniform sampler2D uDisplacementTexture;
-
-//         varying vec2 vUv;
-
-//         void main()
-//         {
-//             float elevation = texture2D(uDisplacementTexture, vUv).r;
-//             if(elevation < 0.25)
-//             {
-//                 elevation = 0.25;
-//             }
-
-//             vec3 depthColor = vec3(1.0, 0.1, 0.1);
-//             vec3 surfaceColor = vec3(0.1, 0.0, 0.5);
-//             vec3 finalColor = vec3(0.0);
-//             finalColor.r += depthColor.r + (surfaceColor.r - depthColor.r) * elevation;
-//             finalColor.g += depthColor.g + (surfaceColor.g - depthColor.g) * elevation;
-//             finalColor.b += depthColor.b + (surfaceColor.b - depthColor.b) * elevation;
-
-//             gl_FragColor = vec4(finalColor, 1.0);
-//         }
-//     `
-// })
-
-// const shaderMesh = new THREE.Mesh(shaderGeometry, shaderMaterial)
-// shaderMesh.rotation.x = - Math.PI * 0.5
-// scene.add(shaderMesh)
+const shaderMesh = new THREE.Mesh(shaderGeometry, shaderMaterial)
+shaderMesh.rotation.x = -Math.PI * 0.5
+scene.add(shaderMesh)
