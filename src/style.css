@@ -14,3 +14,22 @@ body {
   left: 0;
   outline: none;
 }
+
+.loading-bar {
+  z-index: 999;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: white;
+  transform: scaleX(0);
+  transform-origin: top left;
+  transition: 0.2s ease-in-out transform;
+  will-change: transform;
+}
+
+.loading-bar.ended {
+  transform-origin: top right;
+  transition: 0.85s ease-in-out transform;
+}

@@ -8,15 +8,21 @@ import "./style.css"
 /**
  * Loaders
  */
+const loadingBar = document.querySelector(".loading-bar")
 const loadingManager = new THREE.LoadingManager()
-loadingManager.onProgress = () => {
-  console.log("loading")
+loadingManager.onProgress = (_, loaded, total) => {
+  const loadedPercentage = loaded / total
+  loadingBar.style.transform = `scaleX(${loadedPercentage})`
 }
 loadingManager.onLoad = () => {
-  console.log("loaded")
-  gsap.to(overlayGeometry.material.uniforms.uAlpha, {
-    duration: 3,
-    value: 0,
+  // delay call or settimeout
+  gsap.delayedCall(1.2, () => {
+    gsap.to(overlayGeometry.material.uniforms.uAlpha, {
+      duration: 3,
+      value: 0,
+    })
+    loadingBar.classList.add("ended")
+    loadingBar.style.transform = ""
   })
 }
 
